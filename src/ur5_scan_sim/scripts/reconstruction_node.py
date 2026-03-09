@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs_py.point_cloud2 as pc2
+import open3d as o3d
+import numpy as np
+import tf2_ros
+from scipy.spatial.transform import Rotation
+import threading
+
+class ReconstructionNode(Node):
+    def __init__(self):
+        super().__init__('reconstruction_node')
+        
+        # Subscribe to the generated pointclouds
+        self.subscription_pc = self.create_subscription(
+            PointCloud2,
+            '/vision/pointcloud',
+            self.pc_callback,
+            10)
+        
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+        
+        # We accumulate point clouds directly (or we can use TSDF if we had depth images)
+        # Here we accumulate the colorized point clouds transformed to world coordinates.
+        self.accumulated_pcd = o3d.geometry.PointCloud()
+        
+        self.get_logger().info('Reconstruction Node Started. Waiting for /vision/pointcloud...')
+
+        # Protect against concurrent access to self.accumulated_pcd
+        self.pcd_lock = threading.Lock()
+        
+        # Setup a timer to periodically (e.g. every 10 seconds) extract and save the mesh
+        self.timer = self.create_timer(10.0, self.save_mesh)
+        
+        self.cloud_count = 0
+
+    def pc_callback(self, msg):
+        try:
+            # Get the transform from world -> camera_link (where the point cloud is generated)
+            trans = self.tf_buffer.lookup_transform('world', msg.header.frame_id, msg.header.stamp, rclpy.duration.Duration(seconds=0.5))
+            
+            # Extract point cloud data
+            pc_data = list(pc2.read_points(msg, field_names=("x", "y", "z", "rgb"), skip_nans=True))
+            if not pc_data:
+                return
+
+            points = []
+            colors = []
+            for p in pc_data:
+                points.append([p[0], p[1], p[2]])
+                
+                # Unpack RGB
+                rgb_float = p[3]
+                import struct
+                # Convert float to bytes
+                b = struct.pack('f', rgb_float)
+                # Unpack bytes to integers
+                # Format: BGRA or similar depending on how it was packed
+                # If we pack BBBR into I and then view as FLOAT32 (which ros2 point_cloud2 does)
+                val = struct.unpack('I', b)[0]
+                
+                # We packed as b, g, r, a
+                blue = (val & 0x000000FF)
+                green = (val & 0x0000FF00) >> 8
+                red = (val & 0x00FF0000) >> 16
+                colors.append([red / 255.0, green / 255.0, blue / 255.0])
+
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(np.array(points))
+            pcd.colors = o3d.utility.Vector3dVector(np.array(colors))
+            
+            # Transform point cloud to world frame using the tf
+            tx = trans.transform.translation.x
+            ty = trans.transform.translation.y
+            tz = trans.transform.translation.z
+            qx = trans.transform.rotation.x
+            qy = trans.transform.rotation.y
+            qz = trans.transform.rotation.z
+            qw = trans.transform.rotation.w
+            
+            rot = Rotation.from_quat([qx, qy, qz, qw]).as_matrix()
+            extrinsic = np.eye(4)
+            extrinsic[:3, :3] = rot
+            extrinsic[:3, 3] = [tx, ty, tz]
+            
+            pcd.transform(extrinsic)
+            
+            # Downsample to avoid exploding memory
+            pcd = pcd.voxel_down_sample(voxel_size=0.01)
+            
+            with self.pcd_lock:
+                self.accumulated_pcd += pcd
+                # Periodically voxel downsample the accumulated cloud
+                if self.cloud_count % 5 == 0:
+                    self.accumulated_pcd = self.accumulated_pcd.voxel_down_sample(voxel_size=0.005)
+
+            self.cloud_count += 1
+            self.get_logger().info(f'Accumulated cloud {self.cloud_count}. Current points: {len(self.accumulated_pcd.points)}')
+
+        except Exception as e:
+            self.get_logger().error(f"Error accumulating point cloud: {e}")
+
+    def save_mesh(self):
+        with self.pcd_lock:
+            if len(self.accumulated_pcd.points) < 1000:
+                self.get_logger().info("Not enough points to reconstruct yet.")
+                return
+            
+            self.get_logger().info("Generating Surface Mesh using Poisson reconstruction...")
+            pcd = self.accumulated_pcd
+            
+            # Keep a working copy for estimation
+            pcd_copy = copy.deepcopy(pcd) if 'copy' in globals() else pcd
+            try:
+                import copy
+                pcd_copy = copy.deepcopy(pcd)
+            except:
+                pass
+
+            pcd_copy.estimate_normals()
+            pcd_copy.orient_normals_consistent_tangent_plane(100)
+            
+            try:
+                mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd_copy, depth=9)
+                o3d.io.write_triangle_mesh("/media/thanushree/0679d7ea-20c8-4f40-a87c-9f188eef32cd/ur5_ws/live_reconstructed_mesh.obj", mesh)
+                o3d.io.write_point_cloud("/media/thanushree/0679d7ea-20c8-4f40-a87c-9f188eef32cd/ur5_ws/live_point_cloud.ply", pcd_copy)
+                self.get_logger().info("Saved live_reconstructed_mesh.obj and live_point_cloud.ply in ur5_ws/")
+            except Exception as e:
+                self.get_logger().error(f"Failed to generate mesh: {e}")
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ReconstructionNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    
+    # Save a final time upon exit
+    node.save_mesh()
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,14 @@
+# ROS2 build artifacts
+
+build/
+install/
+log/
+
+# Ignore external cloned packages
+
+src/Universal_Robots_ROS2_Description/
+
+# Python cache
+
+**pycache**/
+*.pyc
