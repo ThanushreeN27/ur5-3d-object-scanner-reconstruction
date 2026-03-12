@@ -48,13 +48,20 @@ class MotionPlanner(Node):
         
         self.pose_idx = 0
         self.is_scanning = False
-        self.get_logger().info('Motion Planner Started - Waiting for Service call on /ur5_scanner/start_scan')
+        self.get_logger().info('===== Motion Planner Initialized =====')
+        self.get_logger().info('Watching for Service: /ur5_scanner/start_scan')
         
-        # Publish initial HUD status
-        self.create_timer(1.0, lambda: self.update_status_hud("READY"))
+        # Heartbeat to prove the node is ALIVE
+        self.create_timer(2.0, self.heartbeat_callback)
         
-        # Publish preview once on startup
-        self.create_timer(2.0, self.publish_path_preview)
+        # Publish initial HUD status (delayed to ensure clock is ready)
+        self.create_timer(3.0, lambda: self.update_status_hud("READY"), once=True)
+        
+        # Publish preview
+        self.create_timer(4.0, self.publish_path_preview, once=True)
+
+    def heartbeat_callback(self):
+        self.get_logger().info('Heartbeat: Motion Planner is SPINNING...')
 
     def coverage_callback(self, msg):
         self.current_coverage = msg.data
@@ -62,26 +69,28 @@ class MotionPlanner(Node):
             self.update_status_hud(self.current_status)
 
     def update_status_hud(self, text):
-        self.current_status = text
-        marker = Marker()
-        # ... (rest of metadata stays same)
-        marker.header.frame_id = "world"
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "hud"
-        marker.id = 2
-        marker.type = Marker.TEXT_VIEW_FACING
-        marker.action = Marker.ADD
-        marker.pose.position.x = 0.0
-        marker.pose.position.y = 0.0
-        marker.pose.position.z = 1.0 
-        marker.scale.z = 0.1 
-        marker.color.r = 1.0
-        marker.color.g = 1.0
-        marker.color.b = 1.0
-        marker.color.a = 1.0
-        
-        marker.text = f"UR5 SCANNER: {text} | COV: {self.current_coverage:.1f}%"
-        self.hud_pub.publish(marker)
+        try:
+            self.current_status = text
+            marker = Marker()
+            marker.header.frame_id = "world"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = "hud"
+            marker.id = 2
+            marker.type = Marker.TEXT_VIEW_FACING
+            marker.action = Marker.ADD
+            marker.pose.position.x = 0.0
+            marker.pose.position.y = 0.0
+            marker.pose.position.z = 1.2 # Slightly higher
+            marker.scale.z = 0.12 
+            marker.color.r = 1.0
+            marker.color.g = 1.0
+            marker.color.b = 0.0 # Yellow for better visibility
+            marker.color.a = 1.0
+            
+            marker.text = f"UR5 SCANNER: {text} | COV: {self.current_coverage:.1f}%"
+            self.hud_pub.publish(marker)
+        except Exception as e:
+            self.get_logger().warn(f"HUD Update failed (likely waiting for clock): {e}")
 
     def publish_path_preview(self):
         marker = Marker()
