@@ -6,6 +6,7 @@ from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, Exec
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -125,7 +126,7 @@ def generate_launch_description():
         executable="camera_node.py",
         output="screen",
         parameters=[{"use_sim_time": True}],
-        condition=rclpy.launch.conditions.IfCondition(start_all)
+        condition=IfCondition(start_all)
     )
 
     processing_node = Node(
@@ -133,7 +134,7 @@ def generate_launch_description():
         executable="image_processing_node.py",
         output="screen",
         parameters=[{"use_sim_time": True}],
-        condition=rclpy.launch.conditions.IfCondition(start_all)
+        condition=IfCondition(start_all)
     )
 
     reconstruction_node = Node(
@@ -141,7 +142,7 @@ def generate_launch_description():
         executable="reconstruction_node.py",
         output="screen",
         parameters=[{"use_sim_time": True}],
-        condition=rclpy.launch.conditions.IfCondition(start_all)
+        condition=IfCondition(start_all)
     )
 
     return LaunchDescription(
