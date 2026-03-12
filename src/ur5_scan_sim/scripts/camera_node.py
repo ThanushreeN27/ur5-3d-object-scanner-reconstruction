@@ -9,6 +9,9 @@ from cv_bridge import CvBridge
 import cv2
 import os
 import tf2_ros
+import json
+import numpy as np
+from sensor_msgs.msg import Image, CameraInfo
 
 class CameraSaver(Node):
     def __init__(self):
@@ -28,6 +31,14 @@ class CameraSaver(Node):
             '/camera/depth_image',
             self.depth_callback,
             10)
+        self.subscription_info = self.create_subscription(
+            CameraInfo,
+            '/camera/camera_info',
+            self.info_callback,
+            10)
+        
+        self.camera_info = None
+        self.nerf_frames = []
         self.bridge = CvBridge()
         self.declare_parameter('save_dir', '~/ur5_ws/dataset')
         self.save_dir = os.path.expanduser(self.get_parameter('save_dir').get_parameter_value().string_value)
@@ -81,6 +92,11 @@ class CameraSaver(Node):
     def depth_callback(self, msg):
         self.latest_depth = msg
 
+    def info_callback(self, msg):
+        if self.camera_info is None:
+            self.camera_info = msg
+            self.get_logger().info("Camera Intrinsics Captured for NeRF Export")
+
     def image_callback(self, msg):
         current_time = self.get_clock().now()
         # Save one image every 1 second
@@ -116,13 +132,52 @@ class CameraSaver(Node):
                 self.pose_file.write(f"{self.img_count:04d} {tx} {ty} {tz} {qx} {qy} {qz} {qw}\n")
                 self.pose_file.flush()
                 
-                self.get_logger().info(f"Saved: {rgb_filename} and {depth_filename}")
+                # --- NeRF Export Logic ---
+                # Convert quaternion/translation to 4x4 matrix
+                from scipy.spatial.transform import Rotation as R
+                rot_matrix = R.from_quat([qx, qy, qz, qw]).as_matrix()
+                transform_matrix = np.eye(4)
+                transform_matrix[:3, :3] = rot_matrix
+                transform_matrix[:3, 3] = [tx, ty, tz]
+                
+                frame = {
+                    "file_path": rgb_filename,
+                    "transform_matrix": transform_matrix.tolist()
+                }
+                self.nerf_frames.append(frame)
+                self.save_nerf_json()
+                
+                self.get_logger().info(f"Saved: {rgb_filename} and {depth_filename} (NeRF Frame {self.img_count})")
                 self.img_count += 1
                 self.last_save_time = current_time
             except Exception as e:
                 self.get_logger().error(f"Error saving image or tf: {e}")
 
+    def save_nerf_json(self):
+        if self.camera_info is None: return
+        
+        # Focal length in pixels
+        fx = self.camera_info.k[0]
+        fy = self.camera_info.k[4]
+        cx = self.camera_info.k[2]
+        cy = self.camera_info.k[5]
+        
+        nerf_data = {
+            "fl_x": fx,
+            "fl_y": fy,
+            "cx": cx,
+            "cy": cy,
+            "w": self.camera_info.width,
+            "h": self.camera_info.height,
+            "camera_model": "OPENCV",
+            "frames": self.nerf_frames
+        }
+        
+        with open(os.path.join(self.save_dir, "transforms.json"), "w") as f:
+            json.dump(nerf_data, f, indent=4)
+
     def destroy_node(self):
+        self.save_nerf_json()
         self.pose_file.close()
         super().destroy_node()
 

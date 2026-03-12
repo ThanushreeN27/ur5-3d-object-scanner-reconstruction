@@ -30,6 +30,12 @@ Displays=
     Topic=/vision/pointcloud
     Value=true
   - Class=rviz_default_plugins/Marker
+    Name=Data Gaps (NBV)
+    Namespaces:
+      nbv_lite: true
+    Topic=/ur5_scanner/gap_marker
+    Value=true
+  - Class=rviz_default_plugins/Marker
     Name=Status HUD
     Namespaces:
       hud: true

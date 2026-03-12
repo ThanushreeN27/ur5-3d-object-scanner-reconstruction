@@ -4,6 +4,7 @@ import math
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
+from std_msgs.msg import Float32
 import time
 
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
@@ -21,6 +22,11 @@ class MotionPlanner(Node):
         self.marker_pub = self.create_publisher(Marker, '/ur5_scanner/path_preview', 10)
         self.hud_pub = self.create_publisher(Marker, '/ur5_scanner/status_hud', 10)
         self.srv = self.create_service(Trigger, '/ur5_scanner/start_scan', self.start_scan_callback)
+        
+        # Coverage Subscription
+        self.coverage_sub = self.create_subscription(Float32, '/ur5_scanner/coverage', self.coverage_callback, 10)
+        self.current_coverage = 0.0
+        self.current_status = "READY"
         
         self.joints = [
             'shoulder_pan_joint',
@@ -50,8 +56,15 @@ class MotionPlanner(Node):
         # Publish preview once on startup
         self.create_timer(2.0, self.publish_path_preview)
 
+    def coverage_callback(self, msg):
+        self.current_coverage = msg.data
+        if self.is_scanning:
+            self.update_status_hud(self.current_status)
+
     def update_status_hud(self, text):
+        self.current_status = text
         marker = Marker()
+        # ... (rest of metadata stays same)
         marker.header.frame_id = "world"
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "hud"
@@ -60,13 +73,14 @@ class MotionPlanner(Node):
         marker.action = Marker.ADD
         marker.pose.position.x = 0.0
         marker.pose.position.y = 0.0
-        marker.pose.position.z = 1.0 # Above the robot
-        marker.scale.z = 0.1 # Text height
+        marker.pose.position.z = 1.0 
+        marker.scale.z = 0.1 
         marker.color.r = 1.0
         marker.color.g = 1.0
         marker.color.b = 1.0
         marker.color.a = 1.0
-        marker.text = f"UR5 SCANNER: {text}"
+        
+        marker.text = f"UR5 SCANNER: {text} | COV: {self.current_coverage:.1f}%"
         self.hud_pub.publish(marker)
 
     def publish_path_preview(self):

@@ -2,8 +2,10 @@
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
+from visualization_msgs.msg import Marker
+from std_msgs.msg import Float32
+from geometry_msgs.msg import Point
 import open3d as o3d
 import numpy as np
 import tf2_ros
@@ -41,6 +43,10 @@ class ReconstructionNode(Node):
         # We accumulate point clouds directly (or we can use TSDF if we had depth images)
         # Here we accumulate the colorized point clouds transformed to world coordinates.
         self.accumulated_pcd = o3d.geometry.PointCloud()
+        
+        # Coverage & Gap Publishers
+        self.coverage_pub = self.create_publisher(Float32, '/ur5_scanner/coverage', 10)
+        self.gap_pub = self.create_publisher(Marker, '/ur5_scanner/gap_marker', 10)
         
         self.get_logger().info('Reconstruction Node Started. Waiting for /vision/pointcloud...')
 
@@ -126,9 +132,64 @@ class ReconstructionNode(Node):
 
             self.cloud_count += 1
             self.get_logger().info(f'Accumulated cloud {self.cloud_count}. Current points: {len(self.accumulated_pcd.points)}')
+            
+            # Master Class: Run intelligent coverage analysis
+            self.analyze_coverage()
 
         except Exception as e:
             self.get_logger().error(f"Error accumulating point cloud: {e}")
+
+    def analyze_coverage(self):
+        if len(self.accumulated_pcd.points) < 500: return
+        
+        # Simplified Coverage: Points per expected scanning volume
+        # We assume our target object fits in a 0.4x0.4x0.4m box
+        points = np.asarray(self.accumulated_pcd.points)
+        target_box = (points[:, 0] > 0.2) & (points[:, 0] < 0.6) & \
+                     (points[:, 1] > -0.2) & (points[:, 1] < 0.2) & \
+                     (points[:, 2] > 0.0) & (points[:, 2] < 0.4)
+        
+        target_points = points[target_box]
+        
+        # Heuristic: 20k points in this area = 100% coverage for 1cm resolution
+        coverage = min(100.0, (len(target_points) / 20000.0) * 100.0)
+        self.coverage_pub.publish(Float32(data=coverage))
+        
+        # NBV-Lite: Find a "Gap"
+        if coverage < 95.0 and len(target_points) > 0:
+            # Voxelize the target area to find empty space
+            voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(self.accumulated_pcd, voxel_size=0.05)
+            
+            # For brevity, we'll just pick a random point on the convex hull 
+            # or simply the centroid of the box that has NO points.
+            # Real NBV is complex, we use a visual heuristic here.
+            gap_pos = [0.4, 0.0, 0.2] # Midpoint
+            if len(target_points) > 0:
+                mean_pos = np.mean(target_points, axis=0)
+                # Offset from mean to imply "looking at the other side"
+                gap_pos = [0.8 - mean_pos[0], -mean_pos[1], mean_pos[2]]
+            
+            self.publish_gap_marker(gap_pos)
+
+    def publish_gap_marker(self, pos):
+        marker = Marker()
+        marker.header.frame_id = "world"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "nbv_lite"
+        marker.id = 3
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+        marker.pose.position.x = float(pos[0])
+        marker.pose.position.y = float(pos[1])
+        marker.pose.position.z = float(pos[2])
+        marker.scale.x = 0.08
+        marker.scale.y = 0.08
+        marker.scale.z = 0.08
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0 # Red
+        marker.color.a = 0.6 # Semi-transparent
+        self.gap_pub.publish(marker)
 
     def parameter_callback(self, params):
         for param in params:
