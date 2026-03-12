@@ -118,7 +118,7 @@ def generate_launch_description():
     )
 
     # Arguments for starting nodes automatically
-    start_all = LaunchConfiguration('start_all', default='false')
+    start_all = LaunchConfiguration('start_all', default_value='false')
 
     # Data & Reconstruction Nodes
     camera_node = Node(
@@ -154,7 +154,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            DeclareLaunchArgument('start_all', default='false', description='Whether to start all data capture and reconstruction nodes'),
+            DeclareLaunchArgument('start_all', default_value='false', description='Whether to start all data capture and reconstruction nodes'),
             set_env,
             gazebo,
             node_robot_state_publisher,
