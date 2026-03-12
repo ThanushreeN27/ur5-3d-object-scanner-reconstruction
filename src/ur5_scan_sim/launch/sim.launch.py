@@ -118,7 +118,7 @@ def generate_launch_description():
     )
 
     # Arguments for starting nodes automatically
-    start_all = LaunchConfiguration('start_all', default_value='false')
+    start_all = LaunchConfiguration('start_all', default='false')
 
     # Data & Reconstruction Nodes
     camera_node = Node(
