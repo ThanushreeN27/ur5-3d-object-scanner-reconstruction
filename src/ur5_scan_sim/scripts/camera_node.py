@@ -22,8 +22,8 @@ class CameraSaver(Node):
             self.depth_callback,
             10)
         self.bridge = CvBridge()
-        self.img_count = 0
-        self.save_dir = "/media/thanushree/0679d7ea-20c8-4f40-a87c-9f188eef32cd/ur5_ws/dataset"
+        self.declare_parameter('save_dir', '~/ur5_ws/dataset')
+        self.save_dir = os.path.expanduser(self.get_parameter('save_dir').get_parameter_value().string_value)
         
         self.latest_depth = None
 

@@ -14,6 +14,8 @@ import copy
 class ReconstructionNode(Node):
     def __init__(self):
         super().__init__('reconstruction_node')
+        self.declare_parameter('mesh_output_path', '~/ur5_ws/live_reconstructed_mesh.obj')
+        self.declare_parameter('pc_output_path', '~/ur5_ws/live_point_cloud.ply')
         
         # Subscribe to the generated pointclouds
         self.subscription_pc = self.create_subscription(
@@ -126,10 +128,14 @@ class ReconstructionNode(Node):
             pcd_copy.orient_normals_consistent_tangent_plane(100)
             
             try:
-                mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd_copy, depth=9)
-                o3d.io.write_triangle_mesh("/media/thanushree/0679d7ea-20c8-4f40-a87c-9f188eef32cd/ur5_ws/live_reconstructed_mesh.obj", mesh)
-                o3d.io.write_point_cloud("/media/thanushree/0679d7ea-20c8-4f40-a87c-9f188eef32cd/ur5_ws/live_point_cloud.ply", pcd_copy)
-                self.get_logger().info("Saved live_reconstructed_mesh.obj and live_point_cloud.ply in ur5_ws/")
+                mesh_path = os.path.expanduser(self.get_parameter('mesh_output_path').get_parameter_value().string_value)
+                pc_path = os.path.expanduser(self.get_parameter('pc_output_path').get_parameter_value().string_value)
+                
+                os.makedirs(os.path.dirname(mesh_path), exist_ok=True)
+                
+                o3d.io.write_triangle_mesh(mesh_path, mesh)
+                o3d.io.write_point_cloud(pc_path, pcd_copy)
+                self.get_logger().info(f"Saved {mesh_path} and {pc_path}")
             except Exception as e:
                 self.get_logger().error(f"Failed to generate mesh: {e}")
 
