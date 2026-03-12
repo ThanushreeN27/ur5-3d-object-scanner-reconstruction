@@ -1,10 +1,17 @@
 <?xml version="1.0" ?>
+<!-- --- THE 3D SCANNING ROOM --- -->
+<!-- This file creates the virtual world where the robot lives. -->
+
 <sdf version="1.8">
   <world name="scan_world">
+    
+    <!-- STEP 1: Physics (Gravity and Time) -->
     <physics name="1ms" type="ignored">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
+    
+    <!-- Secret computer plugins that make things fall and collide -->
     <plugin
       filename="gz-sim-physics-system"
       name="gz::sim::systems::Physics">
@@ -23,6 +30,7 @@
       name="gz::sim::systems::SceneBroadcaster">
     </plugin>
 
+    <!-- STEP 2: The Sun (Light) -->
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 10 0 0 0</pose>
@@ -37,6 +45,7 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
+    <!-- STEP 3: The Floor -->
     <model name="ground_plane">
       <static>true</static>
       <link name="link">
@@ -64,7 +73,7 @@
       </link>
     </model>
 
-    <!-- Laboratory Workbench -->
+    <!-- STEP 4: The Workbench (Robot's Table) -->
     <model name="workbench">
       <static>true</static>
       <pose>0.2 0.0 0.025 0 0 0</pose>
@@ -76,7 +85,9 @@
       </link>
     </model>
 
-    <!-- Complex Target Object to Scan -->
+    <!-- STEP 5: Objects to Scan -->
+    
+    <!-- Object A: A colorful complex shape (Sculpture) -->
     <model name="sculpture">
       <pose>0.2 0.3 0.1 0 0 0</pose> <!-- Repositioned on the table -->
       <static>true</static>
@@ -90,19 +101,19 @@
         <pose>0 0 0.1 0 0.5 0</pose>
         <visual name="visual">
           <geometry><cylinder><radius>0.05</radius><length>0.2</length></cylinder></geometry>
-          <material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material>
+          <material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material> <!-- Blue -->
         </visual>
       </link>
       <link name="part2">
         <pose>0 0 0.2 0.7 0 0</pose>
         <visual name="visual">
           <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse></material>
+          <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse></material> <!-- Green -->
         </visual>
       </link>
     </model>
 
-    <!-- Bowl Object (Simplified for stability) -->
+    <!-- Object B: A white sphere (Bowl) -->
     <model name="bowl">
       <pose>0.4 -0.2 0.05 0 0 0</pose>
       <static>true</static>
@@ -116,7 +127,7 @@
       </link>
     </model>
 
-    <!-- Gear Object (Simplified) -->
+    <!-- Object C: A 3D industrial gear shape -->
     <model name="industrial_gear">
       <pose>0.5 0.1 0.07 0 0 0</pose>
       <static>true</static>

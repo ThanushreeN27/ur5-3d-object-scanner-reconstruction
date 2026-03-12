@@ -1,15 +1,23 @@
+# --- ROBOT BRAIN SETTINGS ---
+# This file tells the robot how to move its muscles (motors).
+
 controller_manager:
   ros__parameters:
-    update_rate: 100  # Hz
+    # How fast the robot thinks (100 times per second)
+    update_rate: 100  
 
+    # This tool reports where the robot's joints are right now
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
+    # This tool follows the "path" we give it to move the arm
     joint_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+# --- WHICH JOINTS TO MOVE ---
 joint_trajectory_controller:
   ros__parameters:
+    # The names of the 6 motors in the UR5 arm
     joints:
       - shoulder_pan_joint
       - shoulder_lift_joint
@@ -17,8 +25,10 @@ joint_trajectory_controller:
       - wrist_1_joint
       - wrist_2_joint
       - wrist_3_joint
+    # We want to control the POSITION (angle) of each motor
     command_interfaces:
       - position
+    # Tell us the Position and Speed of the motors
     state_interfaces:
       - position
       - velocity

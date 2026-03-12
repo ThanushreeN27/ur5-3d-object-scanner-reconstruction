@@ -1,15 +1,21 @@
 <?xml version="1.0"?>
+<!-- --- ROBOT BODY DESCRIPTION --- -->
+<!-- This file explains what the robot looks like and where the camera is attached. -->
+
 <robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur5_with_camera">
-  <!-- Use UR5 defaults -->
+  
+  <!-- Tools to help build the robot -->
   <xacro:arg name="name" default="ur5"/>
   <xacro:arg name="ur_type" default="ur5"/>
   <xacro:arg name="tf_prefix" default=""/>
   
+  <!-- Import the official UR5 arm model -->
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 
+  <!-- The "Floor" or starting point of the 3D world -->
   <link name="world"/>
 
-  <!-- Instantiate the UR5 robot -->
+  <!-- STEP 1: Build the UR5 Arm -->
   <xacro:ur_robot
     name="$(arg name)"
     tf_prefix="$(arg tf_prefix)"
@@ -22,7 +28,8 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:ur_robot>
 
-  <!-- Add Camera Link attached to tool0 -->
+  <!-- STEP 2: The Camera Box -->
+  <!-- This is the small blue box attached to the end of the arm -->
   <link name="camera_link">
     <visual>
       <geometry>
@@ -44,13 +51,15 @@
     </inertial>
   </link>
 
+  <!-- STEP 3: Glue the Camera to the Wrist -->
   <joint name="camera_joint" type="fixed">
     <parent link="tool0"/>
     <child link="camera_link"/>
     <origin xyz="0 0 0.05" rpy="0 -1.5708 0"/>
   </joint>
 
-  <!-- Gazebo specific things -->
+  <!-- STEP 4: The Simulation Sensor -->
+  <!-- This makes the blue box actually "see" things in the simulation -->
   <gazebo reference="camera_link">
     <sensor name="camera_sensor" type="rgbd_camera">
       <pose>0 0 0 0 0 0</pose>
@@ -79,18 +88,22 @@
     </sensor>
   </gazebo>
 
-  <!-- Gazebo ROS 2 Control (Harmonic/Jazzy) -->
+  <!-- STEP 5: Simulation Brain -->
+  <!-- This connects the robot to the movement controllers we defined -->
   <gazebo>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
       <parameters>$(find ur5_scan_sim)/config/ur5_controllers.yaml</parameters>
     </plugin>
   </gazebo>
 
-  <!-- ROS 2 Control Hardware -->
+  <!-- STEP 6: Motor Details -->
+  <!-- Each joint below is a motor that can move. We tell it where to start. -->
   <ros2_control name="ur5" type="system">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
+    
+    <!-- Base motor -->
     <joint name="shoulder_pan_joint">
       <command_interface name="position">
         <param name="min">-6.28318530718</param>
@@ -101,6 +114,8 @@
       </state_interface>
       <state_interface name="velocity"/>
     </joint>
+    
+    <!-- Shoulder motor -->
     <joint name="shoulder_lift_joint">
       <command_interface name="position">
         <param name="min">-6.28318530718</param>
@@ -111,6 +126,8 @@
       </state_interface>
       <state_interface name="velocity"/>
     </joint>
+    
+    <!-- Elbow motor -->
     <joint name="elbow_joint">
       <command_interface name="position">
         <param name="min">-3.14159265359</param>
@@ -121,6 +138,8 @@
       </state_interface>
       <state_interface name="velocity"/>
     </joint>
+    
+    <!-- Wrist 1 motor -->
     <joint name="wrist_1_joint">
       <command_interface name="position">
         <param name="min">-6.28318530718</param>
@@ -131,6 +150,8 @@
       </state_interface>
       <state_interface name="velocity"/>
     </joint>
+    
+    <!-- Wrist 2 motor -->
     <joint name="wrist_2_joint">
       <command_interface name="position">
         <param name="min">-6.28318530718</param>
@@ -141,6 +162,8 @@
       </state_interface>
       <state_interface name="velocity"/>
     </joint>
+    
+    <!-- Wrist 3 motor -->
     <joint name="wrist_3_joint">
       <command_interface name="position">
         <param name="min">-6.28318530718</param>

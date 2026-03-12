@@ -1,3 +1,6 @@
+# --- THE RVIZ WINDOW CONFIGURATION ---
+# This file tells the Rviz window which 3D layers to show (Grid, Robot, Map, HUD).
+
 [Display]
 Namespaces=true
 Properties=true

@@ -1,23 +1,29 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- --- THE PROJECT ID CARD --- -->
+<!-- This file tells ROS what this project is called and which other 
+     projects it needs to work properly. -->
+
 <package format="3">
   <name>ur5_scan_sim</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>A ROS 2 project for 3D scanning with a UR5 robot and a camera.</description>
   <maintainer email="thanushree.reddy27@gmail.com">thanushree</maintainer>
   <license>TODO: License declaration</license>
 
+  <!-- Tools needed to build the project -->
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- DEPENDENCIES: Other projects we use to run our code -->
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>trajectory_msgs</depend>
-  <depend>cv_bridge</depend>
-  <depend>tf2_ros</depend>
-  <depend>xacro</depend>
+  <depend>cv_bridge</depend> <!-- For Vision -->
+  <depend>tf2_ros</depend>   <!-- For Math and Positions -->
+  <depend>xacro</depend>     <!-- For Robot building -->
   <depend>ur_description</depend>
   <depend>gazebo_ros</depend>
   <depend>interactive_markers</depend>

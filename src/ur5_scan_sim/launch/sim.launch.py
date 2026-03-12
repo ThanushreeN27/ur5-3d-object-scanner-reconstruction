@@ -1,6 +1,7 @@
 import os
 import sys
 
+# --- STEP 1: Import the launch tools ---
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess, RegisterEventHandler
@@ -12,13 +13,19 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
+    """
+    This is the "DIRECTOR" of the show.
+    It starts the simulation, the robot, the camera, and all the 3D map tools at the same time.
+    """
     pkg_ur5_scan_sim = get_package_share_directory('ur5_scan_sim')
     
-    # Paths to files
+    # --- Part 1: File Paths ---
+    # These tell the computer where to find our Robot shape and our 3D World
     urdf_xacro_file = os.path.join(pkg_ur5_scan_sim, 'urdf', 'ur5_with_camera.xacro')
     world_file = os.path.join(pkg_ur5_scan_sim, 'worlds', 'scan_world.sdf')
     
-    # Robot State Publisher
+    # --- Part 2: Robot State Publisher ---
+    # This node calculates exactly where every bone (joint) of the robot is.
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -39,13 +46,15 @@ def generate_launch_description():
         parameters=[robot_description, {"use_sim_time": True}],
     )
 
-    # Make sure Gazebo can find the gz_ros2_control plugin
+    # --- Part 3: Plugin Path ---
+    # Make sure the simulation can find its "brain" plugin
     if 'GZ_SIM_SYSTEM_PLUGIN_PATH' in os.environ:
         os.environ['GZ_SIM_SYSTEM_PLUGIN_PATH'] += ':/opt/ros/jazzy/lib'
     else:
         os.environ['GZ_SIM_SYSTEM_PLUGIN_PATH'] = '/opt/ros/jazzy/lib'
 
-    # Gazebo Harmonic (gz-sim)
+    # --- Part 4: Gazebo (The Game Engine) ---
+    # This starts the actual 3D simulation window
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [PathJoinSubstitution([FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"])]
@@ -53,7 +62,8 @@ def generate_launch_description():
         launch_arguments={"gz_args": f"-r -v 4 {world_file}"}.items(),
     )
 
-    # Spawn robot in Gazebo
+    # --- Part 5: Spawn the Robot ---
+    # This "drops" the virtual robot into the 3D world
     spawn_entity = Node(
         package="ros_gz_sim",
         executable="create",
@@ -66,7 +76,8 @@ def generate_launch_description():
         ],
     )
 
-    # ROS-GZ Bridge for Camera
+    # --- Part 6: ROS-GZ Bridge ---
+    # This acts like an "Interpreter" so Rviz can understand the simulation camera
     gz_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -79,7 +90,8 @@ def generate_launch_description():
         output="screen"
     )
 
-    # Controllers Spawner
+    # --- Part 7: Controllers ---
+    # These "drivers" control the actual movement of the robot's arms
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -92,7 +104,7 @@ def generate_launch_description():
         arguments=["joint_trajectory_controller", "-c", "/controller_manager"],
     )
 
-    # Delay spawner until robot is spawned
+    # Wait for the robot to exist before starting its movement drivers
     delay_joint_state_broadcaster = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=spawn_entity,
@@ -107,8 +119,9 @@ def generate_launch_description():
         )
     )
 
+    # --- Part 8: Rviz (The Visualizer) ---
+    # This opens the window where we see the 3D map and HUD
     rviz_config_file = os.path.join(pkg_ur5_scan_sim, 'config', 'ur5_scan.rviz')
-
     node_rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -118,10 +131,10 @@ def generate_launch_description():
         parameters=[{"use_sim_time": True}],
     )
 
-    # Arguments for starting nodes automatically
+    # --- Part 9: AI & Map Nodes ---
+    # These only start if we say "--start_all:=true" when running the command
     start_all = LaunchConfiguration('start_all', default='false')
 
-    # Data & Reconstruction Nodes
     camera_node = Node(
         package="ur5_scan_sim",
         executable="camera_node.py",
@@ -160,6 +173,7 @@ def generate_launch_description():
         parameters=[{"use_sim_time": True}],
     )
 
+    # --- FINISH: Combine everything into one big list ---
     return LaunchDescription(
         [
             DeclareLaunchArgument('start_all', default_value='false', description='Whether to start all data capture and reconstruction nodes'),
