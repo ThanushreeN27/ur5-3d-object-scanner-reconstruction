@@ -1,4 +1,5 @@
 import os
+import sys
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -39,10 +40,10 @@ def generate_launch_description():
     )
 
     # Make sure Gazebo can find the gz_ros2_control plugin
-    set_env = ExecuteProcess(
-        cmd=['export', 'GZ_SIM_SYSTEM_PLUGIN_PATH=$GZ_SIM_SYSTEM_PLUGIN_PATH:/opt/ros/jazzy/lib'],
-        shell=True
-    )
+    if 'GZ_SIM_SYSTEM_PLUGIN_PATH' in os.environ:
+        os.environ['GZ_SIM_SYSTEM_PLUGIN_PATH'] += ':/opt/ros/jazzy/lib'
+    else:
+        os.environ['GZ_SIM_SYSTEM_PLUGIN_PATH'] = '/opt/ros/jazzy/lib'
 
     # Gazebo Harmonic (gz-sim)
     gazebo = IncludeLaunchDescription(
@@ -155,7 +156,6 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument('start_all', default_value='false', description='Whether to start all data capture and reconstruction nodes'),
-            set_env,
             gazebo,
             node_robot_state_publisher,
             spawn_entity,

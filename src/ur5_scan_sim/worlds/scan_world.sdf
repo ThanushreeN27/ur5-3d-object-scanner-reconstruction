@@ -102,17 +102,14 @@
       </link>
     </model>
 
-    <!-- Bowl Object -->
+    <!-- Bowl Object (Simplified for stability) -->
     <model name="bowl">
       <pose>0.4 -0.2 0.05 0 0 0</pose>
       <static>true</static>
       <link name="link">
         <visual name="visual">
           <geometry>
-            <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/bowl/tip/meshes/bowl.dae</uri>
-              <scale>1 1 1</scale>
-            </mesh>
+            <sphere><radius>0.1</radius></sphere>
           </geometry>
           <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material>
         </visual>
