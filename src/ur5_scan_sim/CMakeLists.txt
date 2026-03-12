@@ -29,6 +29,7 @@ install(PROGRAMS
   scripts/image_processing_node.py
   scripts/reconstruction_node.py
   scripts/interactive_control_node.py
+  scripts/view_results.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
