@@ -3,6 +3,8 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
 from cv_bridge import CvBridge
 import cv2
 import os
@@ -11,6 +13,11 @@ import tf2_ros
 class CameraSaver(Node):
     def __init__(self):
         super().__init__('camera_node')
+        self.img_count = 0
+        
+        # FOV Visualizer Publisher
+        self.fov_pub = self.create_publisher(Marker, '/camera/fov_visual', 10)
+        self.create_timer(1.0, self.publish_fov_visual)
         self.subscription_rgb = self.create_subscription(
             Image,
             '/camera/image',
@@ -36,6 +43,40 @@ class CameraSaver(Node):
         self.pose_file = open(os.path.join(self.save_dir, "poses.txt"), "a")
         self.get_logger().info("Camera node started, waiting for images...")
         self.last_save_time = self.get_clock().now()
+
+    def publish_fov_visual(self):
+        marker = Marker()
+        marker.header.frame_id = "camera_link"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "fov"
+        marker.id = 1
+        marker.type = Marker.LINE_LIST
+        marker.action = Marker.ADD
+        marker.scale.x = 0.01 # Line thickness
+        marker.color.r = 0.0
+        marker.color.g = 0.5
+        marker.color.b = 1.0 # Light Blue
+        marker.color.a = 0.5
+        
+        # Simple frustum at 0.5m depth
+        d = 0.5
+        w = 0.3
+        h = 0.2
+        
+        # Vertices [x, y, z] in camera_link (optical is usually z-forward, but link is x-forward)
+        # Gazebo camera_link is usually x-forward
+        p0 = Point(x=0.0, y=0.0, z=0.0) # Apex
+        p1 = Point(x=d, y=w, z=h)
+        p2 = Point(x=d, y=-w, z=h)
+        p3 = Point(x=d, y=-w, z=-h)
+        p4 = Point(x=d, y=w, z=-h)
+        
+        # Lines from apex
+        marker.points.extend([p0, p1, p0, p2, p0, p3, p0, p4])
+        # Outer rectangle
+        marker.points.extend([p1, p2, p2, p3, p3, p4, p4, p1])
+        
+        self.fov_pub.publish(marker)
 
     def depth_callback(self, msg):
         self.latest_depth = msg

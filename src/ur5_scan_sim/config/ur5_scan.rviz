@@ -30,6 +30,12 @@ Displays=
     Topic=/vision/pointcloud
     Value=true
   - Class=rviz_default_plugins/Marker
+    Name=Camera FOV
+    Namespaces:
+      fov: true
+    Topic=/camera/fov_visual
+    Value=true
+  - Class=rviz_default_plugins/Marker
     Name=Trajectory Preview
     Namespaces:
       path: true

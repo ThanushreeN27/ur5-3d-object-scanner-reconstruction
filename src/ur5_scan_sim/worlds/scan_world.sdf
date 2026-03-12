@@ -77,8 +77,8 @@
     </model>
 
     <!-- Complex Target Object to Scan -->
-    <model name="target_object">
-      <pose>0.4 0.0 0.1 0 0 0</pose> <!-- Raised to sit on the table -->
+    <model name="sculpture">
+      <pose>0.2 0.3 0.1 0 0 0</pose> <!-- Repositioned on the table -->
       <static>true</static>
       <link name="base">
         <visual name="visual">
@@ -98,6 +98,51 @@
         <visual name="visual">
           <geometry><sphere><radius>0.08</radius></sphere></geometry>
           <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Bowl Object -->
+    <model name="bowl">
+      <pose>0.4 -0.2 0.05 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/bowl/tip/meshes/bowl.dae</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Gear Object (Simplified) -->
+    <model name="industrial_gear">
+      <pose>0.5 0.1 0.07 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="base">
+          <geometry><cylinder><radius>0.1</radius><length>0.04</length></cylinder></geometry>
+          <material><ambient>0.3 0.3 0.3 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+        <visual name="tooth1">
+          <pose>0.1 0 0 0 0 0</pose>
+          <geometry><box><size>0.05 0.03 0.04</size></box></geometry>
+        </visual>
+        <visual name="tooth2">
+          <pose>-0.1 0 0 0 0 0</pose>
+          <geometry><box><size>0.05 0.03 0.04</size></box></geometry>
+        </visual>
+        <visual name="tooth3">
+          <pose>0 0.1 0 0 0 1.57</pose>
+          <geometry><box><size>0.05 0.03 0.04</size></box></geometry>
+        </visual>
+        <visual name="tooth4">
+          <pose>0 -0.1 0 0 0 1.57</pose>
+          <geometry><box><size>0.05 0.03 0.04</size></box></geometry>
         </visual>
       </link>
     </model>
