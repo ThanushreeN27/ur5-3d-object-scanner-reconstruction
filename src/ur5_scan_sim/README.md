@@ -2,6 +2,26 @@
 
 A ROS 2 and Gazebo-based pipeline for multi-view 3D object reconstruction using a UR5 robotic arm.
 
+## 📊 System Architecture
+
+```mermaid
+graph TD
+    subgraph Gazebo_Simulation
+        GZ_UR5[UR5 Robot + RGBD Camera]
+    end
+
+    subgraph ROS2_Processing_Nodes
+        GZ_UR5 -->|RGBD| CAM[Camera Node]
+        CAM -->|Features| IMG[Image Processing Node]
+        CAM -->|PCD| REC[Reconstruction Node]
+        MOT[Motion Planning Node] -->|Joint Commands| GZ_UR5
+    end
+
+    subgraph User_Interface
+        UI[Interactive Rviz Marker] -->|Trigger| MOT
+    end
+```
+
 ![Project Overview](https://img.shields.io/badge/ROS2-Jazzy-blue)
 ![Python](https://img.shields.io/badge/Python-3.12-green)
 ![Gazebo](https://img.shields.io/badge/Simulation-Gazebo%20Harmonic-orange)

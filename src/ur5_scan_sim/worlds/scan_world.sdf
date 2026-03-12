@@ -64,10 +64,21 @@
       </link>
     </model>
 
-    <!-- Target Object to Scan -->
+    <!-- Laboratory Workbench -->
+    <model name="workbench">
+      <static>true</static>
+      <pose>0.2 0.0 0.025 0 0 0</pose>
+      <link name="table_link">
+        <visual name="surface">
+          <geometry><box><size>1.0 1.2 0.05</size></box></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
     <!-- Complex Target Object to Scan -->
     <model name="target_object">
-      <pose>0.4 0.0 0.05 0 0 0</pose>
+      <pose>0.4 0.0 0.1 0 0 0</pose> <!-- Raised to sit on the table -->
       <static>true</static>
       <link name="base">
         <visual name="visual">
