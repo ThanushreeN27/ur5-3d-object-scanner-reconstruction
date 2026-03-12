@@ -153,6 +153,13 @@ def generate_launch_description():
         parameters=[{"use_sim_time": True}],
     )
 
+    motion_node = Node(
+        package="ur5_scan_sim",
+        executable="motion_planning_node.py",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+    )
+
     return LaunchDescription(
         [
             DeclareLaunchArgument('start_all', default_value='false', description='Whether to start all data capture and reconstruction nodes'),
@@ -167,5 +174,6 @@ def generate_launch_description():
             processing_node,
             reconstruction_node,
             interactive_node,
+            motion_node,
         ]
     )
