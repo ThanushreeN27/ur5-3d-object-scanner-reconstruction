@@ -145,6 +145,13 @@ def generate_launch_description():
         condition=IfCondition(start_all)
     )
 
+    interactive_node = Node(
+        package="ur5_scan_sim",
+        executable="interactive_control_node.py",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+    )
+
     return LaunchDescription(
         [
             DeclareLaunchArgument('start_all', default='false', description='Whether to start all data capture and reconstruction nodes'),
@@ -159,5 +166,6 @@ def generate_launch_description():
             camera_node,
             processing_node,
             reconstruction_node,
+            interactive_node,
         ]
     )

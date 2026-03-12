@@ -20,6 +20,8 @@
   <depend>xacro</depend>
   <depend>ur_description</depend>
   <depend>gazebo_ros</depend>
+  <depend>interactive_markers</depend>
+  <depend>visualization_msgs</depend>
   <depend>ros_gz_bridge</depend>
   <depend>ros_gz_sim</depend>
   <depend>controller_manager</depend>

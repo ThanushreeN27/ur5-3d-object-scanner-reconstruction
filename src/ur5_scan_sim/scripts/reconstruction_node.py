@@ -127,15 +127,28 @@ class ReconstructionNode(Node):
             pcd_copy.estimate_normals()
             pcd_copy.orient_normals_consistent_tangent_plane(100)
             
+            # --- Advanced Filtering ---
+            self.get_logger().info("Applying noise filters...")
+            # 1. Statistical Outlier Removal
+            cl, ind = pcd_copy.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+            pcd_copy = pcd_copy.select_by_index(ind)
+            
+            # 2. Radius Outlier Removal (removes isolated points)
+            cl, ind = pcd_copy.remove_radius_outlier(nb_points=16, radius=0.05)
+            pcd_copy = pcd_copy.select_by_index(ind)
+            
             try:
                 mesh_path = os.path.expanduser(self.get_parameter('mesh_output_path').get_parameter_value().string_value)
                 pc_path = os.path.expanduser(self.get_parameter('pc_output_path').get_parameter_value().string_value)
                 
                 os.makedirs(os.path.dirname(mesh_path), exist_ok=True)
                 
+                # Poisson reconstruction often works better with filtered clouds
+                mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd_copy, depth=9)
+                
                 o3d.io.write_triangle_mesh(mesh_path, mesh)
                 o3d.io.write_point_cloud(pc_path, pcd_copy)
-                self.get_logger().info(f"Saved {mesh_path} and {pc_path}")
+                self.get_logger().info(f"Saved filtered mesh to {mesh_path} and PC to {pc_path}")
             except Exception as e:
                 self.get_logger().error(f"Failed to generate mesh: {e}")
 

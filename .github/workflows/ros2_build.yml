@@ -1,0 +1,39 @@
+name: ROS 2 CI Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:jazzy-ros-core # Use a stable ROS 2 Jazzy image
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          apt update && apt install -y \
+            python3-pip \
+            python3-colcon-common-extensions \
+            ros-jazzy-ur-description \
+            ros-jazzy-cv-bridge \
+            ros-jazzy-tf2-ros \
+            ros-jazzy-sensor-msgs-py \
+            ros-jazzy-ros-gz-sim \
+            ros-jazzy-ros-gz-bridge \
+            ros-jazzy-controller-manager \
+            ros-jazzy-joint-trajectory-controller \
+            ros-jazzy-joint-state-broadcaster
+          pip install open3d numpy opencv-python --break-system-packages || true
+
+      - name: Build Workspace
+        run: |
+          mkdir -p ~/ws/src
+          cp -r $GITHUB_WORKSPACE ~/ws/src/ur5_scan_sim
+          cd ~/ws
+          . /opt/ros/jazzy/setup.sh
+          colcon build --packages-select ur5_scan_sim
