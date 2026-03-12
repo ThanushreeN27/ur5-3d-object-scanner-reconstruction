@@ -29,6 +29,12 @@ Displays=
     Name=Live PointCloud
     Topic=/vision/pointcloud
     Value=true
+  - Class=rviz_default_plugins/Marker
+    Name=Trajectory Preview
+    Namespaces:
+      path: true
+    Topic=/ur5_scanner/path_preview
+    Value=true
   - Class=rviz_default_plugins/InteractiveMarkers
     Name=Interactive Markers
     Update Topic=/ur5_scan_controls/update

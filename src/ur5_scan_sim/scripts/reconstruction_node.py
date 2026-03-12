@@ -24,6 +24,7 @@ class ReconstructionNode(Node):
         self.declare_parameter('std_ratio', 2.0)
         self.declare_parameter('radius', 0.05)
         self.declare_parameter('nb_points', 16)
+        self.declare_parameter('use_icp', True)
         
         self.add_on_set_parameters_callback(self.parameter_callback)
         
@@ -102,6 +103,18 @@ class ReconstructionNode(Node):
             
             pcd.transform(extrinsic)
             
+            # --- Master Class: ICP Refinement ---
+            if self.get_parameter('use_icp').value and len(self.accumulated_pcd.points) > 1000:
+                self.get_logger().info("Refining pose with ICP...")
+                # Perform Point-to-Point ICP
+                reg_p2p = o3d.pipelines.registration.registration_icp(
+                    pcd, self.accumulated_pcd, 0.02, np.eye(4),
+                    o3d.pipelines.registration.TransformationEstimationPointToPoint())
+                
+                # Apply the refined transformation
+                pcd.transform(reg_p2p.transformation)
+                self.get_logger().info(f"ICP Fitness: {reg_p2p.fitness:.4f}")
+
             # Downsample to avoid exploding memory
             pcd = pcd.voxel_down_sample(voxel_size=0.01)
             

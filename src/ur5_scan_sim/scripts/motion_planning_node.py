@@ -6,6 +6,10 @@ from rclpy.node import Node
 from std_srvs.srv import Trigger
 import time
 
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
+
 class MotionPlanner(Node):
     def __init__(self):
         super().__init__('motion_planning_node')
@@ -14,6 +18,7 @@ class MotionPlanner(Node):
             '/joint_trajectory_controller/joint_trajectory', 
             10
         )
+        self.marker_pub = self.create_publisher(Marker, '/ur5_scanner/path_preview', 10)
         self.srv = self.create_service(Trigger, '/ur5_scanner/start_scan', self.start_scan_callback)
         
         self.joints = [
@@ -37,6 +42,47 @@ class MotionPlanner(Node):
         self.pose_idx = 0
         self.is_scanning = False
         self.get_logger().info('Motion Planner Started - Waiting for Service call on /ur5_scanner/start_scan')
+        
+        # Publish preview once on startup
+        self.create_timer(2.0, self.publish_path_preview)
+
+    def publish_path_preview(self):
+        marker = Marker()
+        marker.header.frame_id = "world"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "path"
+        marker.id = 0
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+        marker.scale.x = 0.02 # Width of the line
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 1.0 # Cyan
+        marker.color.a = 0.8
+        
+        # We don't have a full IK solver here, but we can visualize the poses 
+        # roughly or just publish the joint targets. For a true preview, we'd 
+        # calculate the Forward Kinematics. Since we want a "Flight Path" visual,
+        # let's approximate the camera link positions for these poses.
+        # These are rough estimates for the scanning area.
+        approx_positions = [
+            [0.4, 0.0, 0.5],
+            [0.5, 0.3, 0.45],
+            [0.5, -0.3, 0.45],
+            [0.3, 0.0, 0.6],
+            [0.6, 0.4, 0.5],
+            [0.6, -0.4, 0.5]
+        ]
+        
+        for pos in approx_positions:
+            p = Point()
+            p.x = pos[0]
+            p.y = pos[1]
+            p.z = pos[2]
+            marker.points.append(p)
+            
+        self.marker_pub.publish(marker)
+        self.get_logger().info("Published trajectory preview to Rviz")
 
     def start_scan_callback(self, request, response):
         if self.is_scanning:
