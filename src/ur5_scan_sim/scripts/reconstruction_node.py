@@ -11,11 +11,21 @@ from scipy.spatial.transform import Rotation
 import threading
 import copy
 
+from rcl_interfaces.msg import SetParametersResult
+
 class ReconstructionNode(Node):
     def __init__(self):
         super().__init__('reconstruction_node')
         self.declare_parameter('mesh_output_path', '~/ur5_ws/live_reconstructed_mesh.obj')
         self.declare_parameter('pc_output_path', '~/ur5_ws/live_point_cloud.ply')
+        
+        # Advanced Filtering Parameters
+        self.declare_parameter('nb_neighbors', 20)
+        self.declare_parameter('std_ratio', 2.0)
+        self.declare_parameter('radius', 0.05)
+        self.declare_parameter('nb_points', 16)
+        
+        self.add_on_set_parameters_callback(self.parameter_callback)
         
         # Subscribe to the generated pointclouds
         self.subscription_pc = self.create_subscription(
@@ -107,6 +117,11 @@ class ReconstructionNode(Node):
         except Exception as e:
             self.get_logger().error(f"Error accumulating point cloud: {e}")
 
+    def parameter_callback(self, params):
+        for param in params:
+            self.get_logger().info(f"Parameter '{param.name}' updated to: {param.value}")
+        return SetParametersResult(successful=True)
+
     def save_mesh(self):
         with self.pcd_lock:
             if len(self.accumulated_pcd.points) < 1000:
@@ -117,24 +132,22 @@ class ReconstructionNode(Node):
             pcd = self.accumulated_pcd
             
             # Keep a working copy for estimation
-            pcd_copy = copy.deepcopy(pcd) if 'copy' in globals() else pcd
-            try:
-                import copy
-                pcd_copy = copy.deepcopy(pcd)
-            except:
-                pass
-
+            pcd_copy = copy.deepcopy(pcd)
             pcd_copy.estimate_normals()
             pcd_copy.orient_normals_consistent_tangent_plane(100)
             
             # --- Advanced Filtering ---
-            self.get_logger().info("Applying noise filters...")
-            # 1. Statistical Outlier Removal
-            cl, ind = pcd_copy.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+            nb_neighbors = self.get_parameter('nb_neighbors').value
+            std_ratio = self.get_parameter('std_ratio').value
+            radius = self.get_parameter('radius').value
+            nb_points = self.get_parameter('nb_points').value
+            
+            self.get_logger().info(f"Applying filters (neighbors={nb_neighbors}, std={std_ratio}, radius={radius})")
+            
+            cl, ind = pcd_copy.remove_statistical_outlier(nb_neighbors=nb_neighbors, std_ratio=std_ratio)
             pcd_copy = pcd_copy.select_by_index(ind)
             
-            # 2. Radius Outlier Removal (removes isolated points)
-            cl, ind = pcd_copy.remove_radius_outlier(nb_points=16, radius=0.05)
+            cl, ind = pcd_copy.remove_radius_outlier(nb_points=nb_points, radius=radius)
             pcd_copy = pcd_copy.select_by_index(ind)
             
             try:

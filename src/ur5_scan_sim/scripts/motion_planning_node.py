@@ -3,7 +3,7 @@
 import math
 import rclpy
 from rclpy.node import Node
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from std_srvs.srv import Trigger
 import time
 
 class MotionPlanner(Node):
@@ -14,6 +14,8 @@ class MotionPlanner(Node):
             '/joint_trajectory_controller/joint_trajectory', 
             10
         )
+        self.srv = self.create_service(Trigger, '/ur5_scanner/start_scan', self.start_scan_callback)
+        
         self.joints = [
             'shoulder_pan_joint',
             'shoulder_lift_joint',
@@ -23,8 +25,6 @@ class MotionPlanner(Node):
             'wrist_3_joint'
         ]
         
-        # A set of typical UR5 poses that sweep around the space in front
-        # [pan, lift, elbow, wrist1, wrist2, wrist3]
         self.scanning_poses = [
             [0.0, -1.0, 1.0, -1.57, -1.57, 0.0],
             [0.5, -1.0, 1.0, -1.57, -1.57, 0.0],
@@ -34,13 +34,30 @@ class MotionPlanner(Node):
             [-1.0, -0.8, 1.0, -1.57, -1.57, 0.0]
         ]
         
-        self.timer = self.create_timer(5.0, self.timer_callback)
         self.pose_idx = 0
-        self.get_logger().info('Motion Planner Started')
+        self.is_scanning = False
+        self.get_logger().info('Motion Planner Started - Waiting for Service call on /ur5_scanner/start_scan')
+
+    def start_scan_callback(self, request, response):
+        if self.is_scanning:
+            response.success = False
+            response.message = "Scan already in progress"
+            return response
+            
+        self.get_logger().info('Starting Scan sequence...')
+        self.is_scanning = True
+        self.pose_idx = 0
+        self.timer = self.create_timer(5.0, self.timer_callback)
+        
+        response.success = True
+        response.message = "Scan sequence triggered"
+        return response
 
     def timer_callback(self):
         if self.pose_idx >= len(self.scanning_poses):
             self.get_logger().info('Scanning Finished.')
+            self.timer.cancel()
+            self.is_scanning = False
             return
 
         pos = self.scanning_poses[self.pose_idx]

@@ -4,12 +4,15 @@ import rclpy
 from rclpy.node import Node
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
-from std_msgs.msg import String
+from std_srvs.srv import Trigger
 
 class InteractiveControlNode(Node):
     def __init__(self):
         super().__init__('interactive_control_node')
         self.server = InteractiveMarkerServer(self, 'ur5_scan_controls')
+        
+        # Service client to trigger the robot motion
+        self.client = self.create_client(Trigger, '/ur5_scanner/start_scan')
         
         self.create_interactive_marker()
         self.get_logger().info("Interactive Marker Server Started. Look for it in Rviz!")
@@ -52,7 +55,13 @@ class InteractiveControlNode(Node):
 
     def process_feedback(self, feedback):
         if feedback.event_type == feedback.BUTTON_CLICK:
-            self.get_logger().info("Scan button clicked! Implementation of trigger coming soon...")
+            self.get_logger().info("Scan button clicked! Requesting scan service...")
+            if not self.client.service_is_ready():
+                self.get_logger().error("Scan service not available!")
+                return
+            
+            req = Trigger.Request()
+            self.client.call_async(req)
 
 def main(args=None):
     rclpy.init(args=args)
