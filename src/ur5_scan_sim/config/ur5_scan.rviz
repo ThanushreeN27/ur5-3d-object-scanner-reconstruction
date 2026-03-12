@@ -1,0 +1,44 @@
+[Display]
+Namespaces=true
+Properties=true
+StatusBar=true
+Toolbar=true
+
+[Displays]
+Class=rviz_common/DisplayGroup
+Displays=
+  - Class=rviz_default_plugins/Grid
+    Name=Grid
+    Value=true
+  - Class=rviz_default_plugins/RobotModel
+    Name=RobotModel
+    Robot Description=robot_description
+    Value=true
+  - Class=rviz_default_plugins/TF
+    Name=TF
+    Value=true
+  - Class=rviz_default_plugins/Image
+    Name=RGB Camera
+    Topic=/camera/image
+    Value=true
+  - Class=rviz_default_plugins/Image
+    Name=Depth Camera
+    Topic=/camera/depth_image
+    Value=true
+  - Class=rviz_default_plugins/PointCloud2
+    Name=Live PointCloud
+    Topic=/vision/pointcloud
+    Value=true
+  - Class=rviz_default_plugins/Image
+    Name=Feature Viz
+    Topic=/vision/features_image
+    Value=true
+Enabled=true
+Name=root
+
+[Window State]
+Class=rviz_common/WindowManagerState
+X=0
+Y=0
+Width=1920
+Height=1016

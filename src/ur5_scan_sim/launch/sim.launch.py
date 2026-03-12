@@ -105,14 +105,58 @@ def generate_launch_description():
         )
     )
 
+    rviz_config_file = os.path.join(pkg_ur5_scan_sim, 'config', 'ur5_scan.rviz')
+
+    node_rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        arguments=["-d", rviz_config_file],
+        parameters=[{"use_sim_time": True}],
+    )
+
+    # Arguments for starting nodes automatically
+    start_all = LaunchConfiguration('start_all', default='false')
+
+    # Data & Reconstruction Nodes
+    camera_node = Node(
+        package="ur5_scan_sim",
+        executable="camera_node.py",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+        condition=rclpy.launch.conditions.IfCondition(start_all)
+    )
+
+    processing_node = Node(
+        package="ur5_scan_sim",
+        executable="image_processing_node.py",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+        condition=rclpy.launch.conditions.IfCondition(start_all)
+    )
+
+    reconstruction_node = Node(
+        package="ur5_scan_sim",
+        executable="reconstruction_node.py",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+        condition=rclpy.launch.conditions.IfCondition(start_all)
+    )
+
     return LaunchDescription(
         [
+            DeclareLaunchArgument('start_all', default='false', description='Whether to start all data capture and reconstruction nodes'),
             set_env,
             gazebo,
             node_robot_state_publisher,
             spawn_entity,
             gz_bridge,
+            node_rviz,
             delay_joint_state_broadcaster,
             delay_joint_trajectory_controller,
+            camera_node,
+            processing_node,
+            reconstruction_node,
         ]
     )
