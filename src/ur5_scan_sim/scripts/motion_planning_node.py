@@ -19,6 +19,7 @@ class MotionPlanner(Node):
             10
         )
         self.marker_pub = self.create_publisher(Marker, '/ur5_scanner/path_preview', 10)
+        self.hud_pub = self.create_publisher(Marker, '/ur5_scanner/status_hud', 10)
         self.srv = self.create_service(Trigger, '/ur5_scanner/start_scan', self.start_scan_callback)
         
         self.joints = [
@@ -43,8 +44,30 @@ class MotionPlanner(Node):
         self.is_scanning = False
         self.get_logger().info('Motion Planner Started - Waiting for Service call on /ur5_scanner/start_scan')
         
+        # Publish initial HUD status
+        self.create_timer(1.0, lambda: self.update_status_hud("READY"))
+        
         # Publish preview once on startup
         self.create_timer(2.0, self.publish_path_preview)
+
+    def update_status_hud(self, text):
+        marker = Marker()
+        marker.header.frame_id = "world"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "hud"
+        marker.id = 2
+        marker.type = Marker.TEXT_VIEW_FACING
+        marker.action = Marker.ADD
+        marker.pose.position.x = 0.0
+        marker.pose.position.y = 0.0
+        marker.pose.position.z = 1.0 # Above the robot
+        marker.scale.z = 0.1 # Text height
+        marker.color.r = 1.0
+        marker.color.g = 1.0
+        marker.color.b = 1.0
+        marker.color.a = 1.0
+        marker.text = f"UR5 SCANNER: {text}"
+        self.hud_pub.publish(marker)
 
     def publish_path_preview(self):
         marker = Marker()
@@ -93,6 +116,7 @@ class MotionPlanner(Node):
         self.get_logger().info('Starting Scan sequence...')
         self.is_scanning = True
         self.pose_idx = 0
+        self.update_status_hud(f"SCANNING (0/{len(self.scanning_poses)})")
         self.timer = self.create_timer(5.0, self.timer_callback)
         
         response.success = True
@@ -102,11 +126,15 @@ class MotionPlanner(Node):
     def timer_callback(self):
         if self.pose_idx >= len(self.scanning_poses):
             self.get_logger().info('Scanning Finished.')
+            self.update_status_hud("FINISHED")
             self.timer.cancel()
             self.is_scanning = False
+            # Wait 5 seconds then go back to READY
+            self.create_timer(5.0, lambda: self.update_status_hud("READY"), once=True)
             return
 
         pos = self.scanning_poses[self.pose_idx]
+        self.update_status_hud(f"SCANNING ({self.pose_idx + 1}/{len(self.scanning_poses)})")
         msg = JointTrajectory()
         msg.joint_names = self.joints
         

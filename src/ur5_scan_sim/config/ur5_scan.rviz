@@ -30,6 +30,12 @@ Displays=
     Topic=/vision/pointcloud
     Value=true
   - Class=rviz_default_plugins/Marker
+    Name=Status HUD
+    Namespaces:
+      hud: true
+    Topic=/ur5_scanner/status_hud
+    Value=true
+  - Class=rviz_default_plugins/Marker
     Name=Camera FOV
     Namespaces:
       fov: true
