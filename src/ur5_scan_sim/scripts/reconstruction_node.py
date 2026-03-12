@@ -9,6 +9,7 @@ import numpy as np
 import tf2_ros
 from scipy.spatial.transform import Rotation
 import threading
+import copy
 
 class ReconstructionNode(Node):
     def __init__(self):
