@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
-<!-- --- THE PROJECT ID CARD --- -->
+<!-- THE PROJECT ID CARD -->
 <!-- This file tells ROS what this project is called and which other 
      projects it needs to work properly. -->
 

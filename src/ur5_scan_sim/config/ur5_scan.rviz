@@ -56,10 +56,6 @@ Displays=
       path: true
     Topic=/ur5_scanner/path_preview
     Value=true
-  - Class=rviz_default_plugins/InteractiveMarkers
-    Name=Interactive Markers
-    Update Topic=/ur5_scan_controls/update
-    Value=true
   - Class=rviz_default_plugins/Image
     Name=Feature Viz
     Topic=/vision/features_image
